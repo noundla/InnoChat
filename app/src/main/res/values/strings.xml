@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">InnoChat</string>
+    <string name="username">Username</string>
+    <string name="password">Password</string>
+    <string name="inno_chat">Inno Chat</string>
+    <string name="login">Login</string>
+
+</resources>
