@@ -5,4 +5,10 @@
     <string name="inno_chat">Inno Chat</string>
     <string name="login">Login</string>
 
+    <string name="error_field_required">This field is required</string>
+    <string name="registration_url">"https://im.koderoot.net/register-on-im.koderoot.net"</string>
+    <string name="msg_login_failed">Failed to login. Please try again.</string>
+    <string name="ok">Ok</string>
+    <string name="menu_search">Search</string>
+    <string name="menu_logout">Logout</string>
 </resources>

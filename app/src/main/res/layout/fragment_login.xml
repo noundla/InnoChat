@@ -14,9 +14,9 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
-        android:textColor="@color/colorPrimary"
         android:text="@string/inno_chat"
-        android:textSize="36sp"
+        android:textColor="@color/colorPrimary"
+        android:textSize="48sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -27,7 +27,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.15" />
+        app:layout_constraintGuide_percent="0.12" />
 
     <android.support.design.widget.TextInputLayout
         android:id="@+id/userNameTIL"
@@ -50,6 +50,7 @@
             android:maxLength="10"
             android:selectAllOnFocus="true"
             android:singleLine="true"
+            android:text="honey"
             android:textAlignment="viewStart"
             android:textColor="@color/colorPrimary"
             android:textColorHint="@color/colorAccent" />
@@ -76,6 +77,7 @@
             android:maxLength="10"
             android:selectAllOnFocus="true"
             android:singleLine="true"
+            android:text="test123"
             android:textAlignment="viewStart"
             android:textColor="@color/colorPrimary"
             android:textColorHint="@color/colorAccent" />
@@ -97,7 +99,7 @@
         app:layout_constraintTop_toBottomOf="@+id/passwordTIL" />
 
     <TextView
-        android:id="@+id/bottomTV"
+        android:id="@+id/registrationTV"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"

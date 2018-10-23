@@ -21,11 +21,10 @@
             android:id="@+id/userImage"
             android:layout_width="@dimen/image_thumb_width"
             android:layout_height="@dimen/image_thumb_height"
-            android:background="@color/lightGrey"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ProgressBar
+        <!--<ProgressBar
             android:id="@+id/progress"
             style="@style/Widget.AppCompat.ProgressBar"
             android:layout_width="32dp"
@@ -35,7 +34,7 @@
             app:layout_constraintBottom_toBottomOf="@+id/userImage"
             app:layout_constraintEnd_toEndOf="@+id/userImage"
             app:layout_constraintStart_toStartOf="@+id/userImage"
-            app:layout_constraintTop_toTopOf="@+id/userImage" />
+            app:layout_constraintTop_toTopOf="@+id/userImage" />-->
 
         <TextView
             android:id="@+id/nameTV"

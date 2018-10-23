@@ -5,6 +5,7 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.widget.RecyclerView
 import android.widget.ImageView
 import android.widget.TextView
+import com.inno.innochat.AppHelpers
 import com.inno.innochat.DateUtils
 import com.inno.innochat.R
 import com.inno.innochat.model.Message
@@ -33,9 +34,12 @@ class MessagingAdapter(context: Context) : RecyclerViewAdapter<Message>(context)
         viewHolder.getView<TextView>(R.id.text_message_body)?.text = item.message
         viewHolder.getView<TextView>(R.id.text_message_time)?.text = DateUtils.formatDateTime(item.createdAt)
         viewHolder.getView<TextView>(R.id.text_message_name)?.text = item.sender.nickname
-        viewHolder.getView<ImageView>(R.id.image_message_profile)?.setImageDrawable(ContextCompat.getDrawable(context, item.sender.avatar))
-
-
+        val senderImage: ImageView? = viewHolder.getView<ImageView>(R.id.image_message_profile)
+        // load thumbnail
+        AppHelpers.loadImage(context, item.sender.avatar)
+                .error(R.drawable.ic_person1)
+                .fallback(R.drawable.ic_person1)
+                .into(senderImage)
     }
 
     override fun getItemType(position: Int): Int {

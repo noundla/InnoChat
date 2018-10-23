@@ -3,6 +3,7 @@ package com.inno.innochat.ui
 
 import android.app.SearchManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
@@ -15,17 +16,20 @@ import android.widget.TextView
 import com.inno.innochat.AppHelpers
 
 import com.inno.innochat.R
+import com.inno.innochat.adapter.UsersAdapter
 import com.inno.innochat.model.User
+import com.inno.innochat.model.UsersModel
+import com.inno.innochat.xmpp.InnoChatConnectionService
 import ir.rainday.easylist.FilterableAdapter
 import ir.rainday.easylist.GenericViewHolder
 import ir.rainday.easylist.RecyclerViewAdapter
 import ir.rainday.easylist.setEmptyView
 import kotlinx.android.synthetic.main.fragment_users_list.*
 
-class UsersListFragment : Fragment(), SearchView.OnQueryTextListener {
-
+class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericViewHolder.OnItemClicked<User> {
 
     private lateinit var searchView: SearchView
+    private var mNavigationListener : NavigationListener? = null
 
     private val mRecyclerView: RecyclerView by lazy {
         val linearLayoutManager = LinearLayoutManager(context!!, LinearLayoutManager.VERTICAL, false)
@@ -34,35 +38,7 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener {
     }
 
     private val adapter: RecyclerViewAdapter<User> by lazy {
-
-        val adapter = object : RecyclerViewAdapter<User>(context!!), FilterableAdapter {
-            override fun getLayout(viewType: Int): Int {
-                return  R.layout.item_user_list
-            }
-
-            override fun bindView(item: User, position: Int, viewHolder: RecyclerView.ViewHolder) {
-                viewHolder as GenericViewHolder
-                val nameTV: TextView? = viewHolder.getView<TextView>(R.id.nameTV)
-                val lastMsgTV: TextView? = viewHolder.getView<TextView>(R.id.lastMessageTV)
-                val lastMsgTimeTV: TextView? = viewHolder.getView<TextView>(R.id.lastMessageTime)
-                val userImage: ImageView? = viewHolder.getView<ImageView>(R.id.userImage)
-
-                nameTV?.text = item.nickname
-                lastMsgTV?.text = ""
-                lastMsgTimeTV?.text = ""
-                // load thumbnail
-                AppHelpers.loadImage(context, item.avatar)
-                        .error(R.drawable.ic_person2)
-                        .fallback(R.drawable.ic_person2)
-                        .into(userImage)
-            }
-
-
-            override fun filterItem(constraint: CharSequence, item: Any): Boolean {
-                return (item as User).nickname!!.toLowerCase().contains(constraint.toString().toLowerCase())
-            }
-        }
-        adapter
+        UsersAdapter(context!!, this)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -81,6 +57,23 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener {
         loadUsers()
     }
 
+    override fun onStart() {
+        super.onStart()
+        updateTitle()
+    }
+
+    override fun onAttach(context: Context?) {
+        super.onAttach(context)
+        if (context is NavigationListener) {
+            mNavigationListener = context
+        }
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        mNavigationListener = null
+    }
+
     private fun updateTitle() {
         val activity = activity as AppCompatActivity
         activity.supportActionBar.let { actionBar ->
@@ -91,11 +84,15 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener {
     }
 
     private fun loadUsers() {
-
+        adapter.items = UsersModel.getInstance().getUsers()
     }
 
     private fun observeNewUsers() {
         // Todo: observe the database changes for send/receive messages
+    }
+
+    override fun onRecyclerViewItemClicked(adapter: RecyclerView.Adapter<*>, view: View, position: Int, item: User) {
+        mNavigationListener?.showChatScreen(item)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?, inflater: MenuInflater?) {
@@ -114,6 +111,12 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener {
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         when(item?.itemId){
+            R.id.logout -> {
+                val intent = Intent(context, InnoChatConnectionService::class.java)
+                context?.stopService(intent)
+                mNavigationListener?.showLoginScreen()
+                return true
+            }
         }
         return super.onOptionsItemSelected(item)
     }
