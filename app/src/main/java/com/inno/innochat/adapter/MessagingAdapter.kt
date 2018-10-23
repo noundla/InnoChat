@@ -9,6 +9,7 @@ import com.inno.innochat.AppHelpers
 import com.inno.innochat.DateUtils
 import com.inno.innochat.R
 import com.inno.innochat.model.Message
+import com.inno.innochat.model.UsersModel
 import com.inno.innochat.model.me
 import ir.rainday.easylist.GenericViewHolder
 import ir.rainday.easylist.RecyclerViewAdapter
@@ -43,7 +44,7 @@ class MessagingAdapter(context: Context) : RecyclerViewAdapter<Message>(context)
     }
 
     override fun getItemType(position: Int): Int {
-        return if (items!![position].sender == me) VIEW_TYPE_MESSAGE_SENT else VIEW_TYPE_MESSAGE_RECEIVED
+        return if (items!![position].sender.id == UsersModel.getInstance().currentUser?.id) VIEW_TYPE_MESSAGE_SENT else VIEW_TYPE_MESSAGE_RECEIVED
     }
 
 }

@@ -20,7 +20,6 @@ import android.widget.Toast
 
 import com.inno.innochat.R
 import com.inno.innochat.adapter.MessagingAdapter
-import com.inno.innochat.adapter.UsersAdapter
 import com.inno.innochat.model.Message
 import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.User
@@ -67,7 +66,7 @@ class ChatFragment : Fragment() {
         }
 
         button_chatbox_send.setOnClickListener {
-            sendMessage()
+            processSendMessage()
         }
 
         edittext_chatbox.addTextChangedListener(object : TextWatcher {
@@ -86,7 +85,7 @@ class ChatFragment : Fragment() {
         edittext_chatbox.setOnEditorActionListener(object : TextView.OnEditorActionListener{
             override fun onEditorAction(p0: TextView?, i: Int, p2: KeyEvent?): Boolean {
                 if (i == EditorInfo.IME_ACTION_SEND) {
-                    sendMessage()
+                    processSendMessage()
                     return true;
                 }
                 return false;
@@ -145,6 +144,7 @@ class ChatFragment : Fragment() {
 
     private fun loadMessages() {
         adapter.items = MessagingModel.getInstance().getMessages()
+        mRecyclerView.scrollToPosition(0)
     }
 
     private fun observeMessages() {
@@ -168,10 +168,12 @@ class ChatFragment : Fragment() {
         }
     }
 
-    private fun sendMessage() {
+    private fun processSendMessage() {
         val text = edittext_chatbox.text
-        if (text.isNullOrEmpty())
+        if (text.isNullOrEmpty()) {
             return
+        }
+
         if (InnoChatConnectionService.getState().equals(InnoChatConnection.ConnectionState.CONNECTED)) {
             Log.d(TAG, "The client is connected to the server,Sending Message")
             //Send the message to the server
@@ -182,7 +184,6 @@ class ChatFragment : Fragment() {
             context?.sendBroadcast(intent)
             MessagingModel.getInstance().sendMessage(body)
             loadMessages()
-            mRecyclerView.scrollToPosition(0)
             edittext_chatbox.text = null
         } else {
             Toast.makeText(context,

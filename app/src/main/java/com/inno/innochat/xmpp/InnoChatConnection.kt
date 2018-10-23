@@ -20,6 +20,7 @@ import org.jivesoftware.smack.ConnectionListener
 import org.jivesoftware.smack.chat2.Chat
 import org.jivesoftware.smack.chat2.ChatManager
 import org.jivesoftware.smack.packet.Message
+import org.jivesoftware.smack.packet.Presence
 import java.io.IOException
 import java.net.InetAddress
 
@@ -72,14 +73,14 @@ class InnoChatConnection(context: Context) : ConnectionListener {
                 .setHost(Constants.HOST)
                 .setPort(Constants.PORT)
                 .setSecurityMode(ConnectionConfiguration.SecurityMode.required)
-                .setUsernameAndPassword(mUsername,mPassword!!)
+                .setUsernameAndPassword(mUsername, mPassword!!)
                 //.setHostAddress(InetAddress.getByName(Constants.HOST))
                 //Was facing this issue
                 //https://discourse.igniterealtime.org/t/connection-with-ssl-fails-with-java-security-keystoreexception-jks-not-found/62566
                 .setKeystoreType(null) //This line seems to get rid of the problem
 //                .setCompressionEnabled(true)
 
-//                .setSendPresence(true)
+                .setSendPresence(true)
                 .setResource("Android")
                 .build()
 
@@ -89,52 +90,59 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         //Set up the ui thread broadcast message receiver.
         setupUiThreadBroadCastMessageReceiver()
 
+        val presence = Presence(Presence.Type.available)
+        presence.setStatus("Available")
+
         mConnection = XMPPTCPConnection(conf)
         mConnection!!.addConnectionListener(this)
         try {
             Log.d(TAG, "Calling connect() ")
             mConnection!!.connect()
             mConnection!!.login(mUsername, mPassword!!)
+            mConnection!!.sendStanza(presence)
+            
             Log.d(TAG, " login() Called ")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
 
-        ChatManager.getInstanceFor(mConnection).addIncomingListener(object : IncomingChatMessageListener {
-            override fun newIncomingMessage(messageFrom: EntityBareJid, message: Message, chat: Chat) {
-                ///ADDED
-                Log.d(TAG, "message.getBody() :" + message.body)
-                Log.d(TAG, "message.getFrom() :" + message.from)
-
-                val from = message.from.toString()
-
-                var contactJid = ""
-                if (from.contains("/")) {
-                    contactJid = from.split("/".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()[0]
-                    Log.d(TAG, "The real jid is :$contactJid")
-                    Log.d(TAG, "The message is from :$from")
-                } else {
-                    contactJid = from
-                }
-
-                //Bundle up the intent and send the broadcast.
-                val intent = Intent(InnoChatConnectionService.NEW_MESSAGE)
-                intent.setPackage(mApplicationContext.packageName)
-                intent.putExtra(InnoChatConnectionService.BUNDLE_FROM_JID, contactJid)
-                intent.putExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY, message.body)
-                mApplicationContext.sendBroadcast(intent)
-
-                Log.d(TAG, "Received message from :$contactJid broadcast sent.")
-                ///ADDED
-
-            }
-        })
+        ChatManager.getInstanceFor(mConnection).addIncomingListener(incomingMessageListener)
 
 
         val reconnectionManager = ReconnectionManager.getInstanceFor(mConnection)
 //        reconnectionManager.setEnabledPerDefault(true)//TODO: sandeep: need to check what is alternative
         reconnectionManager.enableAutomaticReconnection()
 
+    }
+
+    val incomingMessageListener = object : IncomingChatMessageListener {
+        override fun newIncomingMessage(messageFrom: EntityBareJid, message: Message, chat: Chat) {
+            ///ADDED
+            Log.d(TAG, "message.getBody() :" + message.body)
+            Log.d(TAG, "message.getFrom() :" + message.from)
+
+            val from = message.from.toString()
+
+            var contactJid = ""
+            if (from.contains("/")) {
+                contactJid = from.split("/".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()[0]
+                Log.d(TAG, "The real jid is :$contactJid")
+                Log.d(TAG, "The message is from :$from")
+            } else {
+                contactJid = from
+            }
+
+            //Bundle up the intent and send the broadcast.
+            val intent = Intent(InnoChatConnectionService.NEW_MESSAGE)
+            intent.setPackage(mApplicationContext.packageName)
+            intent.putExtra(InnoChatConnectionService.BUNDLE_FROM_JID, contactJid)
+            intent.putExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY, message.body)
+            mApplicationContext.sendBroadcast(intent)
+
+            Log.d(TAG, "Received message from :$contactJid broadcast sent.")
+            ///ADDED
+
+        }
     }
 
     /**
@@ -168,7 +176,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 
 
         val chatManager = ChatManager.getInstanceFor(mConnection)
-
+        chatManager.addIncomingListener(incomingMessageListener)
         try {
             jid = JidCreate.entityBareFrom(toJid)
         } catch (e: XmppStringprepException) {
@@ -198,6 +206,9 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         prefs.edit().putBoolean(Constants.SP_LOGIN_STATUS, false).commit()
 
         if (mConnection != null) {
+            val presence = Presence(Presence.Type.unavailable)
+            presence.status = "Unavailable"
+            mConnection!!.sendStanza(presence)
             mConnection!!.disconnect()
         }
 
