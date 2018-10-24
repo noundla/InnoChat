@@ -2,34 +2,49 @@ package com.inno.innochat.ui
 
 
 import android.app.SearchManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.support.v4.app.Fragment
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
 import android.support.v7.widget.SearchView
+import android.util.Log
 import android.view.*
 import android.widget.ImageView
 import android.widget.TextView
 import com.inno.innochat.AppHelpers
+import com.inno.innochat.Constants
 
 import com.inno.innochat.R
 import com.inno.innochat.adapter.UsersAdapter
+import com.inno.innochat.model.Message
+import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.User
 import com.inno.innochat.model.UsersModel
 import com.inno.innochat.xmpp.InnoChatConnectionService
+import io.realm.RealmChangeListener
+import io.realm.RealmResults
 import ir.rainday.easylist.FilterableAdapter
 import ir.rainday.easylist.GenericViewHolder
 import ir.rainday.easylist.RecyclerViewAdapter
 import ir.rainday.easylist.setEmptyView
 import kotlinx.android.synthetic.main.fragment_users_list.*
+import java.util.*
+import org.jxmpp.jid.impl.JidCreate
+import org.jxmpp.jid.EntityBareJid
+
+
 
 class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericViewHolder.OnItemClicked<User> {
 
     private lateinit var searchView: SearchView
+    private lateinit var mBroadcastReceiver: BroadcastReceiver
     private var mNavigationListener : NavigationListener? = null
+    private var mRealmUsers: RealmResults<User>? = null
 
     private val mRecyclerView: RecyclerView by lazy {
         val linearLayoutManager = LinearLayoutManager(context!!, LinearLayoutManager.VERTICAL, false)
@@ -55,7 +70,28 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
         mRecyclerView.adapter = adapter
         mRecyclerView.setEmptyView(R.layout.layout_no_item)
         loadUsers()
+        activity!!.findViewById<View>(R.id.fab).setOnClickListener{
+            val fragment = AddUserDialogFragment()
+            fragment.userAddListener = object : AddUserDialogFragment.UserAddListener {
+                override fun onUserAdded(name: String, id: String) {
+                    var uID = id
+                    if (!uID.contains("@")) {
+                        uID = "$uID@${Constants.HOST}"
+                    }
+
+                    UsersModel.getInstance().addUser(uID, name)
+
+                    val i = Intent(InnoChatConnectionService.ADD_USER)
+                    i.putExtra(InnoChatConnectionService.BUNDLE_TO, uID)
+                    i.setPackage(context!!.packageName)
+                    context!!.sendBroadcast(i)
+
+                }
+            }
+            fragment.show(childFragmentManager, "AddUserDialogFragment")
+        }
     }
+
 
     override fun onStart() {
         super.onStart()
@@ -84,11 +120,13 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
     }
 
     private fun loadUsers() {
-        adapter.items = UsersModel.getInstance().getUsers()
-    }
-
-    private fun observeNewUsers() {
-        // Todo: observe the database changes for send/receive messages
+        mRealmUsers = UsersModel.getInstance().getUsers()
+        mRealmUsers!!.addChangeListener(object : RealmChangeListener<RealmResults<User>>{
+            override fun onChange(users: RealmResults<User>?) {
+                adapter.items = mRealmUsers
+            }
+        })
+        adapter.items = mRealmUsers
     }
 
     override fun onRecyclerViewItemClicked(adapter: RecyclerView.Adapter<*>, view: View, position: Int, item: User) {
@@ -121,7 +159,6 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
         return super.onOptionsItemSelected(item)
     }
 
-
     override fun onQueryTextSubmit(query: String?): Boolean {
         return false
     }
@@ -130,7 +167,5 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
         (adapter as FilterableAdapter).setFilterConstraint(newText)
         return true
     }
-
-
 
 }

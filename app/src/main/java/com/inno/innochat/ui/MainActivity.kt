@@ -48,24 +48,24 @@ class MainActivity : AppCompatActivity(), NavigationListener, DisplayLoaderListe
         val fragment = LoginFragment()
         supportFragmentManager.beginTransaction().replace(R.id.container, fragment).commitAllowingStateLoss()
         supportActionBar!!.hide()
+        fab.hide()
     }
 
     override fun showUserListScreen() {
         val fragment = UsersListFragment()
         supportFragmentManager.beginTransaction().replace(R.id.container, fragment).commitAllowingStateLoss()
         supportActionBar!!.show()
+        fab.show()
     }
 
     override fun showChatScreen(user: User) {
+
         val fragment = ChatFragment()
         val bundle = Bundle()
         bundle.putParcelable(ChatFragment.EXTRA_RECEIVER, user)
         fragment.arguments = bundle
         supportFragmentManager.beginTransaction().replace(R.id.container, fragment).commitAllowingStateLoss()
-//        supportFragmentManager.beginTransaction()
-//                .add(R.id.container, fragment)
-//                .addToBackStack(null)
-//                .commitAllowingStateLoss()
+        fab.hide()
     }
 
     override fun showLoader() {

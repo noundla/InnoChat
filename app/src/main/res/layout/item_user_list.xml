@@ -78,5 +78,14 @@
             android:textColor="@color/mid_grey"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/userImage" />
+
+        <CheckBox
+            android:id="@+id/status"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:button="@drawable/status_selector"
+            android:background="@null"
+            app:layout_constraintBottom_toBottomOf="@+id/userImage"
+            app:layout_constraintRight_toRightOf="@+id/userImage"/>
     </android.support.constraint.ConstraintLayout>
 </android.support.v7.widget.CardView>

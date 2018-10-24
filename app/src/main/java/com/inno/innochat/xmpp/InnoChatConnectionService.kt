@@ -1,7 +1,10 @@
 package com.inno.innochat.xmpp
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
@@ -14,18 +17,17 @@ import java.io.IOException
 
 class InnoChatConnectionService : Service() {
     companion object {
-        val UI_AUTHENTICATED = "com.blikoon.rooster.uiauthenticated"
-        val UI_AUTH_FAILED = "com.blikoon.rooster.uiauthFailed"
-        val SEND_MESSAGE = "com.blikoon.rooster.sendmessage"
+        val UI_AUTHENTICATED = "com.innochat.uiauthenticated"
+        val UI_AUTH_FAILED = "com.innochat.uiauthFailed"
+        val ADD_USER = "com.innochat.addUser"
+        val SEND_MESSAGE = "com.innochat.sendmessage"
         val BUNDLE_MESSAGE_BODY = "b_body"
         val BUNDLE_TO = "b_to"
 
-        val NEW_MESSAGE = "com.blikoon.rooster.newmessage"
-        val BUNDLE_FROM_JID = "b_from"
         var sConnectionState: InnoChatConnection.ConnectionState? = null
         var sLoggedInState: InnoChatConnection.LoggedInState? = null
 
-        private val TAG = "RoosterService"
+        private val TAG = "InnoChatConnectionService"
 
         fun getState(): InnoChatConnection.ConnectionState {
             return if (sConnectionState == null) {
@@ -45,6 +47,7 @@ class InnoChatConnectionService : Service() {
     private var mTHandler: Handler? = null//We use this handler to post messages to
     //the background thread.
     private var mConnection: InnoChatConnection? = null
+    private var mNewUserSubscribeBroadcastReceiver: BroadcastReceiver? = null
 
     override fun onBind(intent: Intent): IBinder? {
         return null
@@ -53,6 +56,7 @@ class InnoChatConnectionService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate()")
+        registerReceivers()
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
@@ -65,9 +69,30 @@ class InnoChatConnectionService : Service() {
     override fun onDestroy() {
         Log.d(TAG, "onDestroy()")
         stop()
+        unregisterReceivers()
         super.onDestroy()
 
     }
+
+    private fun registerReceivers() {
+        mNewUserSubscribeBroadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val jid = intent.getStringExtra(BUNDLE_TO)
+                mTHandler?.post {
+                    mConnection?.subscribeUser(jid)
+                }
+            }
+        }
+        val filter = IntentFilter(ADD_USER)
+        registerReceiver(mNewUserSubscribeBroadcastReceiver, filter)
+    }
+
+    private fun unregisterReceivers() {
+        if (mNewUserSubscribeBroadcastReceiver!=null){
+            unregisterReceiver(mNewUserSubscribeBroadcastReceiver)
+        }
+    }
+
 
     fun start() {
         Log.d(TAG, " Service Start() function called.")

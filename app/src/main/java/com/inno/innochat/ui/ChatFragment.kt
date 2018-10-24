@@ -23,8 +23,11 @@ import com.inno.innochat.adapter.MessagingAdapter
 import com.inno.innochat.model.Message
 import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.User
+import com.inno.innochat.model.UsersModel
 import com.inno.innochat.xmpp.InnoChatConnection
 import com.inno.innochat.xmpp.InnoChatConnectionService
+import io.realm.RealmChangeListener
+import io.realm.RealmResults
 import ir.rainday.easylist.RecyclerViewAdapter
 import kotlinx.android.synthetic.main.fragment_chat.*
 import java.util.*
@@ -37,6 +40,8 @@ class ChatFragment : Fragment() {
 
     private var mBroadcastReceiver: BroadcastReceiver? = null
     private var mNavigationListener : NavigationListener? = null
+    private var mReceiver : User? = null
+    private lateinit var adapter : MessagingAdapter
 
     private val mRecyclerView: RecyclerView by lazy {
         val linearLayoutManager = LinearLayoutManager(context!!, LinearLayoutManager.VERTICAL, false)
@@ -44,11 +49,6 @@ class ChatFragment : Fragment() {
         reyclerview_message_list?.layoutManager = linearLayoutManager
         reyclerview_message_list.setHasFixedSize(true)
         reyclerview_message_list
-    }
-
-    private var mReceiver : User? = null
-    private val adapter: RecyclerViewAdapter<Message> by lazy {
-        MessagingAdapter(context!!)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
@@ -62,38 +62,41 @@ class ChatFragment : Fragment() {
         setHasOptionsMenu(true)
         loadArguments()
         if (mReceiver!=null) {
-            updateTitle(mReceiver!!.nickname)
-        }
+            updateTitle(mReceiver!!.name)
+            adapter = MessagingAdapter(context!!, mReceiver!!.avatar)
 
-        button_chatbox_send.setOnClickListener {
-            processSendMessage()
-        }
-
-        edittext_chatbox.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(text: Editable?) {
-                button_chatbox_send.isEnabled = !(text.isNullOrEmpty())
+            button_chatbox_send.setOnClickListener {
+                processSendMessage()
             }
 
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-            }
-
-            override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
-            }
-        })
-
-
-        edittext_chatbox.setOnEditorActionListener(object : TextView.OnEditorActionListener{
-            override fun onEditorAction(p0: TextView?, i: Int, p2: KeyEvent?): Boolean {
-                if (i == EditorInfo.IME_ACTION_SEND) {
-                    processSendMessage()
-                    return true;
+            edittext_chatbox.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(text: Editable?) {
+                    button_chatbox_send.isEnabled = !(text.isNullOrEmpty())
                 }
-                return false;
-            }
-        })
-        mRecyclerView.adapter = adapter
-        loadMessages()
-        observeMessages()
+
+                override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+                }
+
+                override fun onTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {
+                }
+            })
+
+
+            edittext_chatbox.setOnEditorActionListener(object : TextView.OnEditorActionListener{
+                override fun onEditorAction(p0: TextView?, i: Int, p2: KeyEvent?): Boolean {
+                    if (i == EditorInfo.IME_ACTION_SEND) {
+                        processSendMessage()
+                        return true;
+                    }
+                    return false;
+                }
+            })
+
+            mRecyclerView.adapter = adapter
+            loadMessages()
+        } else {
+            Toast.makeText(context!!, "Internal problem occured, please try again.", Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onAttach(context: Context?) {
@@ -108,47 +111,18 @@ class ChatFragment : Fragment() {
         mNavigationListener = null
     }
 
-    override fun onResume() {
-        super.onResume()
-        mBroadcastReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                val action = intent.action
-                when (action) {
-                    InnoChatConnectionService.NEW_MESSAGE -> {
-                        val from = intent.getStringExtra(InnoChatConnectionService.BUNDLE_FROM_JID)
-                        val body = intent.getStringExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY)
-
-                        if (from == mReceiver?.id) {
-                            val message = Message(body, mReceiver!!, Date().time)
-                            MessagingModel.getInstance().addMessage(message)
-                            loadMessages()
-                        } else {
-                            Log.d(TAG, "Got a message from jid :$from")
-                        }
-
-                        return
-                    }
-                }
-
-            }
-        }
-
-        val filter = IntentFilter(InnoChatConnectionService.NEW_MESSAGE)
-        context?.registerReceiver(mBroadcastReceiver, filter)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        context?.unregisterReceiver(mBroadcastReceiver)
-    }
+    private var mRealmMessages: RealmResults<Message>? = null
 
     private fun loadMessages() {
-        adapter.items = MessagingModel.getInstance().getMessages()
+        mRealmMessages = MessagingModel.getMessages(mReceiver!!.id, UsersModel.getInstance().currentUser!!.id)
+        mRealmMessages!!.addChangeListener(object : RealmChangeListener<RealmResults<Message>> {
+            override fun onChange(users: RealmResults<Message>?) {
+                adapter.items = mRealmMessages
+                mRecyclerView.scrollToPosition(0)
+            }
+        })
+        adapter.items = mRealmMessages
         mRecyclerView.scrollToPosition(0)
-    }
-
-    private fun observeMessages() {
-        // Todo: observe the database changes for send/receive messages
     }
 
     private fun loadArguments() {
@@ -158,7 +132,6 @@ class ChatFragment : Fragment() {
             }
         }
     }
-
 
     private fun updateTitle(to:String) {
         val activity = activity as AppCompatActivity
@@ -182,8 +155,8 @@ class ChatFragment : Fragment() {
             intent.putExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY, body)
             intent.putExtra(InnoChatConnectionService.BUNDLE_TO, mReceiver!!.id)
             context?.sendBroadcast(intent)
-            MessagingModel.getInstance().sendMessage(body)
-            loadMessages()
+
+            MessagingModel.addMessage(body, UsersModel.getInstance().currentUser!!.id, mReceiver!!.id)
             edittext_chatbox.text = null
         } else {
             Toast.makeText(context,

@@ -43,28 +43,28 @@
 
         <com.inno.innochat.NoEnterEditText
             android:id="@+id/edittext_chatbox"
-            android:hint="Enter message"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="@string/your_message_here"
             android:background="@android:color/transparent"
+            android:inputType="textMultiLine"
             android:layout_gravity="center"
             android:layout_marginLeft="16dp"
             android:layout_marginRight="16dp"
-            android:layout_width="0dp"
             android:layout_weight="1"
-            android:imeOptions="actionSend"
-            android:layout_height="wrap_content"
+            android:imeOptions="normal"
             android:textSize="14sp"
             android:maxLines="5"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/button_chatbox_send"
-            android:text="SEND"
-            android:textSize="14sp"
-            android:background="?attr/selectableItemBackground"
+            android:background="@null"
             android:clickable="true"
             android:enabled="false"
             android:layout_width="64dp"
             android:layout_height="48dp"
-            android:gravity="center"
-            android:layout_gravity="bottom" />
+            android:padding="20dp"
+            app:srcCompat="@drawable/ic_send"
+            android:layout_gravity="bottom"/>
     </LinearLayout>
 </android.support.constraint.ConstraintLayout>

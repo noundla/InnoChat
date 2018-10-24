@@ -4,8 +4,11 @@ import org.jivesoftware.smack.XMPPConnection
 import android.content.*
 import android.preference.PreferenceManager
 import android.support.v4.content.LocalBroadcastManager
+import android.text.TextUtils
 import android.util.Log
 import com.inno.innochat.Constants
+import com.inno.innochat.model.MessagingModel
+import com.inno.innochat.model.UsersModel
 import org.jivesoftware.smack.SmackException
 import org.jxmpp.stringprep.XmppStringprepException
 import org.jxmpp.jid.impl.JidCreate
@@ -21,6 +24,10 @@ import org.jivesoftware.smack.chat2.Chat
 import org.jivesoftware.smack.chat2.ChatManager
 import org.jivesoftware.smack.packet.Message
 import org.jivesoftware.smack.packet.Presence
+import org.jivesoftware.smack.roster.Roster
+import org.jivesoftware.smack.roster.RosterEntry
+import org.jivesoftware.smack.roster.RosterListener
+import org.jxmpp.jid.Jid
 import java.io.IOException
 import java.net.InetAddress
 
@@ -31,7 +38,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private val mApplicationContext: Context
     private val mUsername: String
     private val mPassword: String?
-    private val mServiceName: String
+    //private val mServiceName: String
     private var mConnection: XMPPTCPConnection? = null
     private var uiThreadMessageReceiver: BroadcastReceiver? = null//Receives messages from the ui thread.
 
@@ -49,24 +56,21 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         Log.d(TAG, "InnoChatConnection Constructor called.")
         mApplicationContext = context.applicationContext
         val jid = PreferenceManager.getDefaultSharedPreferences(mApplicationContext)
-                .getString(Constants.SP_USER_NAME, null)
+                .getString(Constants.SP_USER_NAME, "")
         mPassword = PreferenceManager.getDefaultSharedPreferences(mApplicationContext)
                 .getString(Constants.SP_PASSWORD, null)
 
-        if (jid != null) {
-            // TODO: sandeep, need to check whether this is required or not
-            mUsername = jid.split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
-            mServiceName = jid.split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
+        mUsername = if (!TextUtils.isEmpty(jid)) {
+            jid.split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
         } else {
-            mUsername = ""
-            mServiceName = ""
+            ""
         }
     }
 
 
     @Throws(IOException::class, XMPPException::class, SmackException::class)
     fun connect() {
-        Log.d(TAG, "Connecting to server $mServiceName")
+        Log.d(TAG, "Connecting to server ${Constants.HOST}")
 
         val conf = XMPPTCPConnectionConfiguration.builder()
                 .setXmppDomain(Constants.DOMAIN)
@@ -74,74 +78,90 @@ class InnoChatConnection(context: Context) : ConnectionListener {
                 .setPort(Constants.PORT)
                 .setSecurityMode(ConnectionConfiguration.SecurityMode.required)
                 .setUsernameAndPassword(mUsername, mPassword!!)
-                //.setHostAddress(InetAddress.getByName(Constants.HOST))
                 //Was facing this issue
                 //https://discourse.igniterealtime.org/t/connection-with-ssl-fails-with-java-security-keystoreexception-jks-not-found/62566
-                .setKeystoreType(null) //This line seems to get rid of the problem
-//                .setCompressionEnabled(true)
-
+                .setKeystoreType(null)
                 .setSendPresence(true)
                 .setResource("Android")
                 .build()
 
         Log.d(TAG, "Username : $mUsername")
-        Log.d(TAG, "Password : " + mPassword!!)
-        Log.d(TAG, "Server : $mServiceName")
+        Log.d(TAG, "Password : $mPassword")
+        Log.d(TAG, "Server : ${Constants.HOST}")
         //Set up the ui thread broadcast message receiver.
         setupUiThreadBroadCastMessageReceiver()
 
         val presence = Presence(Presence.Type.available)
-        presence.setStatus("Available")
+        presence.status = "Available"
 
         mConnection = XMPPTCPConnection(conf)
         mConnection!!.addConnectionListener(this)
         try {
             Log.d(TAG, "Calling connect() ")
             mConnection!!.connect()
-            mConnection!!.login(mUsername, mPassword!!)
+            mConnection!!.login(mUsername, mPassword)
             mConnection!!.sendStanza(presence)
-            
+
             Log.d(TAG, " login() Called ")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
 
-        ChatManager.getInstanceFor(mConnection).addIncomingListener(incomingMessageListener)
+        // Prepare current user
+        UsersModel.getInstance().prepareCurrentUser(mApplicationContext)
 
+        ChatManager.getInstanceFor(mConnection).addIncomingListener(incomingMessageListener)
+        val roster = Roster.getInstanceFor(mConnection)
+        // Accepts all subscription automatically. As it is just a sample application.
+        roster.subscriptionMode = Roster.SubscriptionMode.accept_all
+        // Save users in db
+        UsersModel.getInstance().saveUsers(roster.entries)
+
+        roster.addRosterListener(object : RosterListener {
+            override fun entriesDeleted(addresses: MutableCollection<Jid>?) {
+                Log.d(TAG,"entriesDeleted for ${addresses}")
+            }
+
+            override fun presenceChanged(presence: Presence?) {
+
+                Log.d(TAG,"Presence changed for ${presence?.from}, isAvailable: ${presence?.isAvailable}")
+                if (presence!=null) {
+                    val from = getJid(presence!!.from.toString())
+                    UsersModel.getInstance().updatePresence(from, presence!!.isAvailable)
+                }
+            }
+
+            override fun entriesUpdated(addresses: MutableCollection<Jid>?) {
+                Log.d(TAG,"entriesUpdated for ${addresses}")
+
+            }
+
+            override fun entriesAdded(addresses: MutableCollection<Jid>?) {
+                Log.d(TAG,"entriesAdded for ${addresses}")
+            }
+
+        })
 
         val reconnectionManager = ReconnectionManager.getInstanceFor(mConnection)
-//        reconnectionManager.setEnabledPerDefault(true)//TODO: sandeep: need to check what is alternative
+        reconnectionManager.setReconnectionPolicy(ReconnectionManager.ReconnectionPolicy.FIXED_DELAY)
         reconnectionManager.enableAutomaticReconnection()
 
     }
 
     val incomingMessageListener = object : IncomingChatMessageListener {
         override fun newIncomingMessage(messageFrom: EntityBareJid, message: Message, chat: Chat) {
-            ///ADDED
-            Log.d(TAG, "message.getBody() :" + message.body)
-            Log.d(TAG, "message.getFrom() :" + message.from)
-
+            Log.d(TAG, "Received message from ${message.from} with body : ${message.body}")
             val from = message.from.toString()
+            var contactJid = getJid(from)
+            MessagingModel.addMessage(message.body, contactJid, UsersModel.getInstance().currentUser!!.id)
+        }
+    }
 
-            var contactJid = ""
-            if (from.contains("/")) {
-                contactJid = from.split("/".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()[0]
-                Log.d(TAG, "The real jid is :$contactJid")
-                Log.d(TAG, "The message is from :$from")
-            } else {
-                contactJid = from
-            }
-
-            //Bundle up the intent and send the broadcast.
-            val intent = Intent(InnoChatConnectionService.NEW_MESSAGE)
-            intent.setPackage(mApplicationContext.packageName)
-            intent.putExtra(InnoChatConnectionService.BUNDLE_FROM_JID, contactJid)
-            intent.putExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY, message.body)
-            mApplicationContext.sendBroadcast(intent)
-
-            Log.d(TAG, "Received message from :$contactJid broadcast sent.")
-            ///ADDED
-
+    private fun getJid(from:String) : String {
+        if (from.contains("/")) {
+            return from.split("/".toRegex()).dropLastWhile({ it.isEmpty() }).toTypedArray()[0]
+        } else {
+            return from
         }
     }
 
@@ -174,7 +194,6 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 
         var jid: EntityBareJid? = null
 
-
         val chatManager = ChatManager.getInstanceFor(mConnection)
         chatManager.addIncomingListener(incomingMessageListener)
         try {
@@ -182,7 +201,6 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         } catch (e: XmppStringprepException) {
             e.printStackTrace()
         }
-
         val chat = chatManager.chatWith(jid)
         try {
             val message = Message(jid, Message.Type.chat)
@@ -200,7 +218,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
      * Logout the user, Stop listening for send message broadcasts and also disconnect from XMPPConnection.
      * */
     fun disconnect() {
-        Log.d(TAG, "Disconnecting from serser $mServiceName")
+        Log.d(TAG, "Disconnecting from server")
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(mApplicationContext)
         prefs.edit().putBoolean(Constants.SP_LOGIN_STATUS, false).commit()
@@ -264,6 +282,15 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 
     }
 
+    fun subscribeUser(jid:String) {
+        val jid = JidCreate.entityBareFrom(jid)
+        try {
+            Roster.getInstanceFor(mConnection).sendSubscriptionRequest(jid)
+        } catch (e:Exception){
+            Log.e(TAG,"Subscribe User failed to $jid", e)
+        }
+    }
+
     private fun showContactListActivityWhenAuthenticated() {
 
         val i = Intent(InnoChatConnectionService.UI_AUTHENTICATED)
@@ -272,6 +299,5 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 //        LocalBroadcastManager.getInstance(mApplicationContext).sendBroadcast(i)
         Log.d(TAG, "Sent the broadcast that we are authenticated")
     }
-
 
 }

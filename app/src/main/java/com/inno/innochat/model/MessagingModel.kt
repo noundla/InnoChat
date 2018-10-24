@@ -1,37 +1,38 @@
 package com.inno.innochat.model
 
 import android.content.Context
+import io.realm.Realm
+import io.realm.RealmResults
+import io.realm.Sort
 import java.util.*
 
-class MessagingModel {
-
-    companion object {
-        private var sMessagingModel: MessagingModel? = null
-
-        fun getInstance(): MessagingModel {
-            if (sMessagingModel == null) {
-                sMessagingModel = MessagingModel()
+object MessagingModel {
+    fun addMessage(body: String, from:String, to:String) {
+        val realm = Realm.getDefaultInstance()
+        realm.executeTransaction(object : Realm.Transaction {
+            override fun execute(realm: Realm) {
+                val message = Message(body, from, to, Date().time)
+                realm.insertOrUpdate(message)
             }
-            return sMessagingModel!!
-        }
-    }
-    private var mMessages : ArrayList<Message> = ArrayList()
-
-    private constructor() {
-
-    }
-
-    fun addMessage(message: Message) {
-        mMessages.add(0, message)
-    }
-
-    fun sendMessage(body: String) {
-        mMessages.add(0, Message(body, UsersModel.getInstance().currentUser!!, Date().time))
+        })
     }
 
 
-
-    fun getMessages() : List<Message> {
-        return mMessages
+    fun getMessages(person1:String, person2:String) : RealmResults<Message> {
+        val realm = Realm.getDefaultInstance()
+        return realm.where(Message::class.java)
+                .beginGroup()
+                .equalTo("from", person1)
+                .and()
+                .equalTo("to", person2)
+                .endGroup()
+                .or()
+                .beginGroup()
+                .equalTo("from", person2)
+                .and()
+                .equalTo("to", person1)
+                .endGroup()
+                .sort("createdAt", Sort.DESCENDING)
+                .findAll()
     }
 }

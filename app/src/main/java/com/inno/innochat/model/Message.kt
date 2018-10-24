@@ -3,13 +3,15 @@ package com.inno.innochat.model
 import android.os.Parcel
 import android.os.Parcelable
 import com.inno.innochat.R
+import io.realm.RealmObject
 import ir.rainday.easylist.Diffable
 
-data class Message(
-        val message: String,
-        val sender: User,
-        val createdAt: Long
-) : Diffable {
+open class Message(
+        var message: String = "",
+        var from : String = "",
+        var to :String ="",
+        var createdAt: Long = 0
+) : RealmObject(), Diffable {
     override val diffableIdentity: String
         get() = createdAt.toString()
 
@@ -21,36 +23,3 @@ data class Message(
         return false
     }
 }
-
-data class User(val id: String,
-                val nickname: String,
-                val avatar: String): Parcelable {
-    constructor(parcel: Parcel) : this(
-            parcel.readString(),
-            parcel.readString(),
-            parcel.readString()) {
-    }
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeString(id)
-        parcel.writeString(nickname)
-        parcel.writeString(avatar)
-    }
-
-    override fun describeContents(): Int {
-        return 0
-    }
-
-    companion object CREATOR : Parcelable.Creator<User> {
-        override fun createFromParcel(parcel: Parcel): User {
-            return User(parcel)
-        }
-
-        override fun newArray(size: Int): Array<User?> {
-            return arrayOfNulls(size)
-        }
-    }
-}
-
-var me: User = User("101","me", "")
-var honey: User = User("102","honey", "")

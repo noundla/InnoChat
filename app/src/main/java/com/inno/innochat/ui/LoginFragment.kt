@@ -86,8 +86,6 @@ class LoginFragment : Fragment() {
                         Log.d(TAG, "Got a broadcast to show the main app window")
                         val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
                         prefs.edit().putBoolean(Constants.SP_LOGIN_STATUS, true).commit()
-                        UsersModel.getInstance().prepareCurrentUser(context)
-                        UsersModel.getInstance().prepareInitialUsers()
                         mLoaderListener?.hideLoader()
                         mNavigationListener?.showUserListScreen()
                     }
@@ -149,10 +147,6 @@ class LoginFragment : Fragment() {
             if (!username.contains("@")) {
                 username = "$userName@${Constants.HOST}"
             }
-
-            //This is where the login login is fired up.
-            //            Log.d(TAG,"Jid and password are valid ,proceeding with login.");
-            //            startActivity(new Intent(this,ContactListActivity.class));
 
             //Save the credentials and login
             saveCredentialsAndLogin(username, password)
