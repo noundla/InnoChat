@@ -25,7 +25,7 @@ This is a sample chat application developed by using XMPP. Smack and AndroidEasy
 
 ## Attributions
 The following libraries were used for developing the application
-* XMPP Framework
+* Smack
 * Realm (for storing the chat and user information)
 * AndroidEasyList (for chat UI)
 
