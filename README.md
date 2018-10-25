@@ -20,7 +20,6 @@ This is a sample chat application developed by using XMPP. Smack and AndroidEasy
 * The application connects the XMPP server at `im.koderoot.net`
 * All the accounts are registered at [koderoot](https://www.koderoot.net/) XMPPA server
 * The profile pictures are local to the application.
-* Registration of a new account can be done [here](https://im.koderoot.net/register-on-im.koderoot.net)
 * No avatar information is got
 
 ## Attributions
