@@ -3,7 +3,9 @@ package com.inno.innochat.model
 import android.os.Parcel
 import android.os.Parcelable
 import io.realm.RealmObject
-
+/**
+ * @author Sandeep Noundla
+ * */
 open class User(var id: String="",
                 var name: String="",
                 var avatar: String="",

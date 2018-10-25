@@ -20,7 +20,11 @@ import android.view.ViewGroup
 import com.inno.innochat.model.User
 import com.inno.innochat.model.UsersModel
 
-
+/**
+ * This fragment is used to display login screen to process the authentication
+ *
+ * @author Sandeep Noundla
+ * */
 class LoginFragment : Fragment() {
 
     companion object {
@@ -31,6 +35,7 @@ class LoginFragment : Fragment() {
     private var mNavigationListener : NavigationListener? = null
     private var mLoaderListener : DisplayLoaderListener? = null
     private var mCoordinateLayout : CoordinatorLayout? = null
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
         // Inflate the layout for this fragment
@@ -75,7 +80,9 @@ class LoginFragment : Fragment() {
     }
 
 
-
+    /**
+     * Register user login status receiver to proceed to users list when authenticated.
+     * */
     private fun registerAuthenticationBroadcast(){
         mBroadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
@@ -112,7 +119,6 @@ class LoginFragment : Fragment() {
         userNameET.error = null
         passwordET.error = null
 
-        // Store values at the time of the login attempt.
         val userName = userNameET.text.toString()
         val password = passwordET.text.toString()
 
@@ -134,8 +140,7 @@ class LoginFragment : Fragment() {
         }
 
         if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
+            // There was an error; don't attempt login
             focusView!!.requestFocus()
         } else {
             // Show a progress spinner, and kick off a background task to
@@ -153,9 +158,13 @@ class LoginFragment : Fragment() {
         }
     }
 
-
+    /**
+     * Saves credentials in sharedpreferences for login purpose.
+     * This has to be stored as encrypted string for better security.
+     *
+     * Start the service to initiate login with xmpp server
+     * */
     private fun saveCredentialsAndLogin(username:String, password:String) {
-        Log.d(TAG, "saveCredentialsAndLogin() called. username: $username, password: $password")
         val prefs = PreferenceManager.getDefaultSharedPreferences(activity)
         prefs.edit()
                 .putString(Constants.SP_USER_NAME, username)
@@ -166,6 +175,9 @@ class LoginFragment : Fragment() {
         context?.startService(i1)
     }
 
+    /**
+     * Launches browser tab with registration page.
+     * */
     private fun launchRegistrationPage() {
         val customTabsIntent = CustomTabsIntent.Builder()
                 .addDefaultShareMenuItem()

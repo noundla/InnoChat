@@ -14,43 +14,33 @@
 
     <android.support.constraint.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:padding="5dp">
 
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/userImage"
             android:layout_width="@dimen/image_thumb_width"
             android:layout_height="@dimen/image_thumb_height"
+            android:layout_marginLeft="8dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
-
-        <!--<ProgressBar
-            android:id="@+id/progress"
-            style="@style/Widget.AppCompat.ProgressBar"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="center"
-            android:theme="@style/CircularProgress"
-            app:layout_constraintBottom_toBottomOf="@+id/userImage"
-            app:layout_constraintEnd_toEndOf="@+id/userImage"
-            app:layout_constraintStart_toStartOf="@+id/userImage"
-            app:layout_constraintTop_toTopOf="@+id/userImage" />-->
 
         <TextView
             android:id="@+id/nameTV"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
-            android:layout_marginStart="8dp"
-            android:text=""
-            android:lines="1"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
             android:ellipsize="end"
+            android:lines="1"
+            android:text=""
             android:textColor="@color/black"
-            android:textSize="18sp"
+            android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toStartOf="@+id/lastMessageTime"
             app:layout_constraintStart_toEndOf="@+id/userImage"
-            app:layout_constraintTop_toTopOf="@+id/userImage" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/lastMessageTV"
@@ -58,15 +48,14 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
-            android:text=""
-            android:lines="1"
             android:ellipsize="end"
+            android:lines="1"
+            android:text="..."
             android:textSize="14sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/userImage"
+            app:layout_constraintStart_toStartOf="@+id/nameTV"
             app:layout_constraintTop_toBottomOf="@+id/nameTV"
             app:layout_constraintVertical_bias="0.0" />
 
@@ -74,15 +63,18 @@
             android:id="@+id/lastMessageTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
+            android:layout_marginRight="8dp"
+            android:text="9:00 AM"
             android:textColor="@color/mid_grey"
+            android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/userImage" />
+            app:layout_constraintTop_toTopOf="@+id/nameTV" />
 
         <CheckBox
             android:id="@+id/status"
             android:layout_width="15dp"
             android:layout_height="15dp"
+            android:layout_margin="2dp"
             android:button="@drawable/status_selector"
             android:background="@null"
             app:layout_constraintBottom_toBottomOf="@+id/userImage"

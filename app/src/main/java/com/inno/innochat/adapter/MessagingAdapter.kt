@@ -14,7 +14,9 @@ import com.inno.innochat.model.UsersModel
 import ir.rainday.easylist.GenericViewHolder
 import ir.rainday.easylist.RecyclerViewAdapter
 import java.util.*
-
+/**
+ * @author Sandeep Noundla
+ * */
 class MessagingAdapter(context: Context, val receiverUrl:String) : RecyclerViewAdapter<Message>(context) {
 
     companion object {

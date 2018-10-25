@@ -1,11 +1,11 @@
 package com.inno.innochat.model
 
-import android.os.Parcel
-import android.os.Parcelable
-import com.inno.innochat.R
 import io.realm.RealmObject
 import ir.rainday.easylist.Diffable
 
+/**
+ * @author Sandeep Noundla
+ * */
 open class Message(
         var message: String = "",
         var from : String = "",

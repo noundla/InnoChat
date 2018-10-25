@@ -1,5 +1,7 @@
 package com.inno.innochat.ui
-
+/**
+ * @author Sandeep Noundla
+ * */
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.v7.widget.LinearLayoutManager
@@ -10,12 +12,15 @@ import com.inno.innochat.model.User
 import com.inno.innochat.xmpp.InnoChatConnection
 import com.inno.innochat.xmpp.InnoChatConnectionService
 import kotlinx.android.synthetic.main.activity_main.*
-
+/**
+ * Callback to invoke when screens status changes.
+ * */
 interface NavigationListener {
     fun showLoginScreen();
     fun showUserListScreen();
     fun showChatScreen(user: User);
 }
+
 
 interface DisplayLoaderListener {
     fun showLoader()
@@ -44,13 +49,18 @@ class MainActivity : AppCompatActivity(), NavigationListener, DisplayLoaderListe
         }
     }
 
+    /**
+     * Displays login screen
+     * */
     override fun showLoginScreen() {
         val fragment = LoginFragment()
         supportFragmentManager.beginTransaction().replace(R.id.container, fragment).commitAllowingStateLoss()
         supportActionBar!!.hide()
         fab.hide()
     }
-
+    /**
+     * Displays users list screen
+     * */
     override fun showUserListScreen() {
         val fragment = UsersListFragment()
         supportFragmentManager.beginTransaction().replace(R.id.container, fragment).commitAllowingStateLoss()
@@ -58,6 +68,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, DisplayLoaderListe
         fab.show()
     }
 
+    /**
+     * Displays chat conversation screen
+     * */
     override fun showChatScreen(user: User) {
 
         val fragment = ChatFragment()

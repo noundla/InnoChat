@@ -30,7 +30,12 @@ import org.jivesoftware.smack.roster.RosterListener
 import org.jxmpp.jid.Jid
 import java.io.IOException
 import java.net.InetAddress
-
+/**
+ * This class is used to initiate the XMPP connection and handle the users/presence change.
+ * All the xmpp calls will be placed here.
+ *
+ * @author Sandeep Noundla
+ * */
 class InnoChatConnection(context: Context) : ConnectionListener {
     companion object {
         private val TAG = "InnoChatConnection"
@@ -40,6 +45,8 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private val mPassword: String?
     //private val mServiceName: String
     private var mConnection: XMPPTCPConnection? = null
+    private var mRoster : Roster? = null
+    private var mChatManager: ChatManager? = null
     private var uiThreadMessageReceiver: BroadcastReceiver? = null//Receives messages from the ui thread.
 
 
@@ -101,46 +108,10 @@ class InnoChatConnection(context: Context) : ConnectionListener {
             mConnection!!.connect()
             mConnection!!.login(mUsername, mPassword)
             mConnection!!.sendStanza(presence)
-
             Log.d(TAG, " login() Called ")
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }
-
-        // Prepare current user
-        UsersModel.getInstance().prepareCurrentUser(mApplicationContext)
-
-        ChatManager.getInstanceFor(mConnection).addIncomingListener(incomingMessageListener)
-        val roster = Roster.getInstanceFor(mConnection)
-        // Accepts all subscription automatically. As it is just a sample application.
-        roster.subscriptionMode = Roster.SubscriptionMode.accept_all
-        // Save users in db
-        UsersModel.getInstance().saveUsers(roster.entries)
-
-        roster.addRosterListener(object : RosterListener {
-            override fun entriesDeleted(addresses: MutableCollection<Jid>?) {
-                Log.d(TAG,"entriesDeleted for ${addresses}")
-            }
-
-            override fun presenceChanged(presence: Presence?) {
-
-                Log.d(TAG,"Presence changed for ${presence?.from}, isAvailable: ${presence?.isAvailable}")
-                if (presence!=null) {
-                    val from = getJid(presence!!.from.toString())
-                    UsersModel.getInstance().updatePresence(from, presence!!.isAvailable)
-                }
-            }
-
-            override fun entriesUpdated(addresses: MutableCollection<Jid>?) {
-                Log.d(TAG,"entriesUpdated for ${addresses}")
-
-            }
-
-            override fun entriesAdded(addresses: MutableCollection<Jid>?) {
-                Log.d(TAG,"entriesAdded for ${addresses}")
-            }
-
-        })
 
         val reconnectionManager = ReconnectionManager.getInstanceFor(mConnection)
         reconnectionManager.setReconnectionPolicy(ReconnectionManager.ReconnectionPolicy.FIXED_DELAY)
@@ -148,12 +119,38 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 
     }
 
-    val incomingMessageListener = object : IncomingChatMessageListener {
+    private val mIncomingMessageListener = object : IncomingChatMessageListener {
         override fun newIncomingMessage(messageFrom: EntityBareJid, message: Message, chat: Chat) {
             Log.d(TAG, "Received message from ${message.from} with body : ${message.body}")
             val from = message.from.toString()
             var contactJid = getJid(from)
             MessagingModel.addMessage(message.body, contactJid, UsersModel.getInstance().currentUser!!.id)
+        }
+    }
+
+    private val mRosterListener = object : RosterListener {
+        override fun entriesDeleted(addresses: MutableCollection<Jid>?) {
+            Log.d(TAG,"entriesDeleted for ${addresses}")
+        }
+
+        override fun presenceChanged(presence: Presence?) {
+
+            Log.d(TAG,"Presence changed for ${presence?.from}, isAvailable: ${presence?.isAvailable}")
+            if (presence!=null) {
+                val from = getJid(presence!!.from.toString())
+                UsersModel.getInstance().updatePresence(from, presence!!.isAvailable)
+            }
+        }
+
+        override fun entriesUpdated(addresses: MutableCollection<Jid>?) {
+            Log.d(TAG,"entriesUpdated for ${addresses}")
+            fetchAndListenRosterChanges()
+
+        }
+
+        override fun entriesAdded(addresses: MutableCollection<Jid>?) {
+            Log.d(TAG,"entriesAdded for ${addresses}")
+            fetchAndListenRosterChanges()
         }
     }
 
@@ -163,6 +160,22 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         } else {
             return from
         }
+    }
+
+    /**
+     * Get the roster entries and update the same in database.
+     * Also listen for roster updates.
+     * */
+    private fun fetchAndListenRosterChanges() {
+        mChatManager = ChatManager.getInstanceFor(mConnection)
+        mChatManager!!.addIncomingListener(mIncomingMessageListener)
+        mRoster = Roster.getInstanceFor(mConnection)
+        // Accepts all subscription automatically. As it is just a sample application.
+        mRoster!!.subscriptionMode = Roster.SubscriptionMode.accept_all
+
+        // Save users in db
+        UsersModel.getInstance().saveUsers(mRoster!!.entries)
+        mRoster!!.addRosterListener(mRosterListener)
     }
 
     /**
@@ -195,7 +208,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         var jid: EntityBareJid? = null
 
         val chatManager = ChatManager.getInstanceFor(mConnection)
-        chatManager.addIncomingListener(incomingMessageListener)
+        chatManager.addIncomingListener(mIncomingMessageListener)
         try {
             jid = JidCreate.entityBareFrom(toJid)
         } catch (e: XmppStringprepException) {
@@ -205,7 +218,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         try {
             val message = Message(jid, Message.Type.chat)
             message.body = body
-            chat.send(message)
+            chat?.send(message)
         } catch (e: SmackException.NotConnectedException) {
             e.printStackTrace()
         } catch (e: InterruptedException) {
@@ -223,10 +236,10 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         val prefs = PreferenceManager.getDefaultSharedPreferences(mApplicationContext)
         prefs.edit().putBoolean(Constants.SP_LOGIN_STATUS, false).commit()
 
+        if(mRoster!=null) {
+            mRoster!!.removeRosterListener(mRosterListener)
+        }
         if (mConnection != null) {
-            val presence = Presence(Presence.Type.unavailable)
-            presence.status = "Unavailable"
-            mConnection!!.sendStanza(presence)
             mConnection!!.disconnect()
         }
 
@@ -242,20 +255,21 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     override fun connected(connection: XMPPConnection) {
         InnoChatConnectionService.sConnectionState = ConnectionState.CONNECTED
         Log.d(TAG, "Connected Successfully")
-
     }
 
     override fun authenticated(connection: XMPPConnection, resumed: Boolean) {
         InnoChatConnectionService.sConnectionState = ConnectionState.CONNECTED
         Log.d(TAG, "Authenticated Successfully")
         showContactListActivityWhenAuthenticated()
+        // Prepare current user
+        UsersModel.getInstance().prepareCurrentUser(mApplicationContext)
+        fetchAndListenRosterChanges()
     }
 
 
     override fun connectionClosed() {
         InnoChatConnectionService.sConnectionState = ConnectionState.DISCONNECTED
         Log.d(TAG, "Connectionclosed()")
-
     }
 
     override fun connectionClosedOnError(e: Exception) {
@@ -264,24 +278,9 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 
     }
 
-    fun reconnectingIn(seconds: Int) {
-        InnoChatConnectionService.sConnectionState = ConnectionState.CONNECTING
-        Log.d(TAG, "ReconnectingIn() ")
-
-    }
-
-    fun reconnectionSuccessful() {
-        InnoChatConnectionService.sConnectionState = ConnectionState.CONNECTED
-        Log.d(TAG, "ReconnectionSuccessful()")
-
-    }
-
-    fun reconnectionFailed(e: Exception) {
-        InnoChatConnectionService.sConnectionState = ConnectionState.DISCONNECTED
-        Log.d(TAG, "ReconnectionFailed()")
-
-    }
-
+    /**
+     * Initiate a subscription with a user from current user.
+     * */
     fun subscribeUser(jid:String) {
         val jid = JidCreate.entityBareFrom(jid)
         try {
@@ -291,8 +290,10 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         }
     }
 
+    /**
+     * Send a broadcast that user is authenticated to use this app.
+     * */
     private fun showContactListActivityWhenAuthenticated() {
-
         val i = Intent(InnoChatConnectionService.UI_AUTHENTICATED)
         i.setPackage(mApplicationContext.packageName)
         mApplicationContext.sendBroadcast(i)

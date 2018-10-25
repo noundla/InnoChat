@@ -26,6 +26,7 @@ import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.User
 import com.inno.innochat.model.UsersModel
 import com.inno.innochat.xmpp.InnoChatConnectionService
+import io.realm.Realm
 import io.realm.RealmChangeListener
 import io.realm.RealmResults
 import ir.rainday.easylist.FilterableAdapter
@@ -36,29 +37,27 @@ import kotlinx.android.synthetic.main.fragment_users_list.*
 import java.util.*
 import org.jxmpp.jid.impl.JidCreate
 import org.jxmpp.jid.EntityBareJid
-
-
-
+/**
+ * This fragment is used to display users list(friends list) screen.
+ * User can perform search operation to find a friend easily here.
+ * */
 class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericViewHolder.OnItemClicked<User> {
-
+    companion object {
+        const val TAG = "UsersListFragment"
+    }
     private lateinit var searchView: SearchView
     private lateinit var mBroadcastReceiver: BroadcastReceiver
     private var mNavigationListener : NavigationListener? = null
     private var mRealmUsers: RealmResults<User>? = null
 
-    private val mRecyclerView: RecyclerView by lazy {
-        val linearLayoutManager = LinearLayoutManager(context!!, LinearLayoutManager.VERTICAL, false)
-        recyclerView?.layoutManager = linearLayoutManager
-        recyclerView
-    }
+    private lateinit var adapter: RecyclerViewAdapter<User>
 
-    private val adapter: RecyclerViewAdapter<User> by lazy {
-        UsersAdapter(context!!, this)
-    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
+    }
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
-        setHasOptionsMenu(true)
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_users_list, container, false)
     }
@@ -66,29 +65,19 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setHasOptionsMenu(true)
         updateTitle()
-        mRecyclerView.adapter = adapter
-        mRecyclerView.setEmptyView(R.layout.layout_no_item)
+        //adapter.isAnimationEnabled = false
+        adapter = UsersAdapter(context!!, this)
+        adapter.isAnimationEnabled = false
+        recyclerView.adapter = adapter
+        recyclerView.setHasFixedSize(true)
+        val linearLayoutManager = LinearLayoutManager(activity, LinearLayoutManager.VERTICAL, false)
+        recyclerView.layoutManager = linearLayoutManager
+
         loadUsers()
         activity!!.findViewById<View>(R.id.fab).setOnClickListener{
-            val fragment = AddUserDialogFragment()
-            fragment.userAddListener = object : AddUserDialogFragment.UserAddListener {
-                override fun onUserAdded(name: String, id: String) {
-                    var uID = id
-                    if (!uID.contains("@")) {
-                        uID = "$uID@${Constants.HOST}"
-                    }
-
-                    UsersModel.getInstance().addUser(uID, name)
-
-                    val i = Intent(InnoChatConnectionService.ADD_USER)
-                    i.putExtra(InnoChatConnectionService.BUNDLE_TO, uID)
-                    i.setPackage(context!!.packageName)
-                    context!!.sendBroadcast(i)
-
-                }
-            }
-            fragment.show(childFragmentManager, "AddUserDialogFragment")
+            showAddUserDialog()
         }
     }
 
@@ -110,6 +99,14 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
         mNavigationListener = null
     }
 
+    override fun onStop() {
+        super.onStop()
+        mRealmUsers?.removeAllChangeListeners()
+    }
+
+    /**
+     * Updates the screen title
+     * */
     private fun updateTitle() {
         val activity = activity as AppCompatActivity
         activity.supportActionBar.let { actionBar ->
@@ -119,22 +116,65 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
         }
     }
 
+    /**
+     * Loads the initial users list from local database and displays on UI
+     * */
     private fun loadUsers() {
         mRealmUsers = UsersModel.getInstance().getUsers()
+        reloadUsersUI()
+        // Listen for new users/presence changes
         mRealmUsers!!.addChangeListener(object : RealmChangeListener<RealmResults<User>>{
             override fun onChange(users: RealmResults<User>?) {
-                adapter.items = mRealmUsers
+                // update the users in list
+                if (users!=null) {
+                    mRealmUsers = users
+                    reloadUsersUI()
+                }
             }
         })
-        adapter.items = mRealmUsers
     }
+
+    /**
+     * Prepare normal list from RealmResult and update the adapter.
+     * */
+    private fun reloadUsersUI() {
+        val realm = Realm.getDefaultInstance()
+        val result = realm.copyFromRealm(mRealmUsers)
+        var adapter = UsersAdapter(context!!, this@UsersListFragment)
+        adapter.items = result
+        recyclerView.adapter = adapter
+    }
+
+    /**
+     * Shows add user dialog to add a user
+     * */
+    private fun showAddUserDialog() {
+        val fragment = AddUserDialogFragment()
+        fragment.userAddListener = object : AddUserDialogFragment.UserAddListener {
+            override fun onUserAdded(name: String, id: String) {
+                var uID = id
+                if (!uID.contains("@")) {
+                    uID = "$uID@${Constants.HOST}"
+                }
+
+                UsersModel.getInstance().addUser(uID, name)
+                // Send broadcast to subscribe with the receiver
+                val i = Intent(InnoChatConnectionService.ADD_USER)
+                i.putExtra(InnoChatConnectionService.BUNDLE_TO, uID)
+                i.setPackage(context!!.packageName)
+                context!!.sendBroadcast(i)
+
+            }
+        }
+        fragment.show(childFragmentManager, "AddUserDialogFragment")
+    }
+
 
     override fun onRecyclerViewItemClicked(adapter: RecyclerView.Adapter<*>, view: View, position: Int, item: User) {
         mNavigationListener?.showChatScreen(item)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?, inflater: MenuInflater?) {
-        super.onCreateOptionsMenu(menu, inflater)
         if (menu!=null && inflater!=null) {
             inflater.inflate(R.menu.menu_user_filter, menu)
 
@@ -145,6 +185,7 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
             searchView.setSearchableInfo(searchManager.getSearchableInfo(activity!!.componentName))
             searchView.setOnQueryTextListener(this)
         }
+        super.onCreateOptionsMenu(menu, inflater)
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -164,7 +205,10 @@ class UsersListFragment : Fragment(), SearchView.OnQueryTextListener, GenericVie
     }
 
     override fun onQueryTextChange(newText: String?): Boolean {
-        (adapter as FilterableAdapter).setFilterConstraint(newText)
+        Log.d(TAG,"onQueryTextChange: $newText")
+        if (isVisible) {
+            (recyclerView.adapter as FilterableAdapter).setFilterConstraint(newText)
+        }
         return true
     }
 

@@ -27,7 +27,7 @@ class InnoChatConnectionService : Service() {
         var sConnectionState: InnoChatConnection.ConnectionState? = null
         var sLoggedInState: InnoChatConnection.LoggedInState? = null
 
-        private val TAG = "InnoChatConnectionService"
+        private val TAG = "InnoChatConnService"
 
         fun getState(): InnoChatConnection.ConnectionState {
             return if (sConnectionState == null) {

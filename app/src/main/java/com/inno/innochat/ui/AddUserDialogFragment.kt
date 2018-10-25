@@ -1,20 +1,20 @@
 package com.inno.innochat.ui
 
-
-import android.app.Dialog
 import android.os.Bundle
 import android.support.v4.app.DialogFragment
-import android.support.v4.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 
 import com.inno.innochat.R
-import com.inno.innochat.R.id.view
 import android.widget.EditText
 
-
-
+/**
+ * This fragment is used to display Add user screen.
+ * User can add a friend by entering jid and name of another user. This helps user to start conversation ahead.
+ *
+ * @author Sandeep Noundla
+ * */
 class AddUserDialogFragment : DialogFragment() {
 
     interface UserAddListener {
@@ -22,12 +22,6 @@ class AddUserDialogFragment : DialogFragment() {
     }
 
     public var userAddListener : UserAddListener? = null
-
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = super.onCreateDialog(savedInstanceState)
-        dialog.setTitle(getString(R.string.add_person))
-        return dialog
-    }
 
     private lateinit var mNameET: EditText
     private lateinit var mUserIdET: EditText

@@ -10,6 +10,11 @@ import android.view.ViewGroup
 import android.view.Window
 import com.inno.innochat.R
 
+/**
+ * This fragment is used to display loading screen
+ *
+ * @author Sandeep Noundla
+ * */
 class LoaderDialogFragment : DialogFragment() {
     companion object {
         val TAG = LoaderDialogFragment::class.java.simpleName
