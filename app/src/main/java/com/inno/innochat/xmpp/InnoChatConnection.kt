@@ -24,9 +24,13 @@ import org.jivesoftware.smack.chat2.Chat
 import org.jivesoftware.smack.chat2.ChatManager
 import org.jivesoftware.smack.packet.Message
 import org.jivesoftware.smack.packet.Presence
+import org.jivesoftware.smack.packet.Stanza
 import org.jivesoftware.smack.roster.Roster
 import org.jivesoftware.smack.roster.RosterEntry
 import org.jivesoftware.smack.roster.RosterListener
+import org.jivesoftware.smackx.receipts.DeliveryReceiptManager
+import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest
+import org.jivesoftware.smackx.receipts.ReceiptReceivedListener
 import org.jxmpp.jid.Jid
 import java.io.IOException
 import java.net.InetAddress
@@ -48,7 +52,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private var mRoster : Roster? = null
     private var mChatManager: ChatManager? = null
     private var uiThreadMessageReceiver: BroadcastReceiver? = null//Receives messages from the ui thread.
-
+    private var mDeliveryReceiptManager : DeliveryReceiptManager? = null;
 
     enum class ConnectionState {
         CONNECTED, AUTHENTICATED, CONNECTING, DISCONNECTING, DISCONNECTED
@@ -163,6 +167,21 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     }
 
     /**
+     * Register and listen for message delivery receipts.
+     * */
+    private fun initDeliveryReceipts() {
+        mDeliveryReceiptManager = DeliveryReceiptManager.getInstanceFor(mConnection)
+        mDeliveryReceiptManager!!.autoAddDeliveryReceiptRequests()
+        mDeliveryReceiptManager!!.addReceiptReceivedListener { fromJid, toJid, receiptId, receipt ->
+
+            Log.d(TAG, "Message receipt received: fromJid: $fromJid , toJid: $toJid, " +
+                    "receiptId: $receiptId, receipt: $receiptId")
+
+        }
+
+    }
+
+    /**
      * Get the roster entries and update the same in database.
      * Also listen for roster updates.
      * */
@@ -217,8 +236,10 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         val chat = chatManager.chatWith(jid)
         try {
             val message = Message(jid, Message.Type.chat)
+            message.stanzaId = System.currentTimeMillis().toString()
             message.body = body
             chat?.send(message)
+            MessagingModel.addMessage(body, UsersModel.getInstance().currentUser!!.id, toJid)
         } catch (e: SmackException.NotConnectedException) {
             e.printStackTrace()
         } catch (e: InterruptedException) {
@@ -264,8 +285,8 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         // Prepare current user
         UsersModel.getInstance().prepareCurrentUser(mApplicationContext)
         fetchAndListenRosterChanges()
+        initDeliveryReceipts()
     }
-
 
     override fun connectionClosed() {
         InnoChatConnectionService.sConnectionState = ConnectionState.DISCONNECTED

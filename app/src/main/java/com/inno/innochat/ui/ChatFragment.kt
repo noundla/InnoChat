@@ -163,8 +163,6 @@ class ChatFragment : Fragment() {
             intent.putExtra(InnoChatConnectionService.BUNDLE_MESSAGE_BODY, body)
             intent.putExtra(InnoChatConnectionService.BUNDLE_TO, mReceiverUser!!.id)
             context?.sendBroadcast(intent)
-
-            MessagingModel.addMessage(body, UsersModel.getInstance().currentUser!!.id, mReceiverUser!!.id)
             edittext_chatbox.text = null
         } else {
             Toast.makeText(context,

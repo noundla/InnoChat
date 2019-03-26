@@ -10,7 +10,8 @@ open class Message(
         var message: String = "",
         var from : String = "",
         var to :String ="",
-        var createdAt: Long = 0
+        var createdAt: Long = 0,
+        var readStatus : Int = 0
 ) : RealmObject(), Diffable {
     override val diffableIdentity: String
         get() = createdAt.toString()
