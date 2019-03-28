@@ -83,11 +83,14 @@ class InnoChatConnection(context: Context) : ConnectionListener {
                 .setXmppDomain(Constants.DOMAIN)
                 .setHost(Constants.HOST)
                 .setPort(Constants.PORT)
-                .setSecurityMode(ConnectionConfiguration.SecurityMode.required)
+
                 .setUsernameAndPassword(mUsername, mPassword!!)
+                //For http domains- security mode should be disabled and keystoretype should be commented
+                .setSecurityMode(ConnectionConfiguration.SecurityMode.required)
                 //Was facing this issue
                 //https://discourse.igniterealtime.org/t/connection-with-ssl-fails-with-java-security-keystoreexception-jks-not-found/62566
                 .setKeystoreType(null)
+
                 .setSendPresence(true)
                 .setResource("Android")
                 .build()
@@ -106,7 +109,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         try {
             Log.d(TAG, "Calling connect() ")
             mConnection!!.connect()
-            mConnection!!.login(mUsername, mPassword)
+            mConnection!!.login()
             mConnection!!.sendStanza(presence)
             Log.d(TAG, " login() Called ")
         } catch (e: InterruptedException) {
