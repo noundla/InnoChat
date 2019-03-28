@@ -1,6 +1,5 @@
 package com.inno.innochat.xmpp
 
-import org.jivesoftware.smack.XMPPConnection
 import android.content.*
 import android.preference.PreferenceManager
 import android.support.v4.content.LocalBroadcastManager
@@ -9,17 +8,13 @@ import android.util.Log
 import com.inno.innochat.Constants
 import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.UsersModel
-import org.jivesoftware.smack.SmackException
+import org.jivesoftware.smack.*
 import org.jxmpp.stringprep.XmppStringprepException
 import org.jxmpp.jid.impl.JidCreate
 import org.jxmpp.jid.EntityBareJid
-import org.jivesoftware.smack.ReconnectionManager
 import org.jivesoftware.smack.chat2.IncomingChatMessageListener
-import org.jivesoftware.smack.tcp.XMPPTCPConnection
-import org.jivesoftware.smack.ConnectionConfiguration
-import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration
-import org.jivesoftware.smack.XMPPException
-import org.jivesoftware.smack.ConnectionListener
+import org.jivesoftware.smack.bosh.BOSHConfiguration
+import org.jivesoftware.smack.bosh.XMPPBOSHConnection
 import org.jivesoftware.smack.chat2.Chat
 import org.jivesoftware.smack.chat2.ChatManager
 import org.jivesoftware.smack.packet.Message
@@ -30,6 +25,8 @@ import org.jivesoftware.smack.roster.RosterListener
 import org.jxmpp.jid.Jid
 import java.io.IOException
 import java.net.InetAddress
+import java.security.KeyStore
+
 /**
  * This class is used to initiate the XMPP connection and handle the users/presence change.
  * All the xmpp calls will be placed here.
@@ -44,7 +41,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private val mUsername: String
     private val mPassword: String?
     //private val mServiceName: String
-    private var mConnection: XMPPTCPConnection? = null
+    private var mConnection: XMPPBOSHConnection? = null
     private var mRoster : Roster? = null
     private var mChatManager: ChatManager? = null
     private var uiThreadMessageReceiver: BroadcastReceiver? = null//Receives messages from the ui thread.
@@ -79,17 +76,20 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     fun connect() {
         Log.d(TAG, "Connecting to server ${Constants.HOST}")
 
-        val conf = XMPPTCPConnectionConfiguration.builder()
+        val conf = BOSHConfiguration.builder()
+                .setUsernameAndPassword(mUsername, mPassword!!)
                 .setXmppDomain(Constants.DOMAIN)
                 .setHost(Constants.HOST)
                 .setPort(Constants.PORT)
-                .setSecurityMode(ConnectionConfiguration.SecurityMode.required)
-                .setUsernameAndPassword(mUsername, mPassword!!)
+                .setFile("/http-bind/")
+                .setResource("Android")
+                .setSecurityMode(ConnectionConfiguration.SecurityMode.disabled)
                 //Was facing this issue
                 //https://discourse.igniterealtime.org/t/connection-with-ssl-fails-with-java-security-keystoreexception-jks-not-found/62566
-                .setKeystoreType(null)
-                .setSendPresence(true)
-                .setResource("Android")
+                .setKeystoreType(KeyStore.getDefaultType())
+//                .setSendPresence(true)
+//
+//                .setUseHttps(true)
                 .build()
 
         Log.d(TAG, "Username : $mUsername")
@@ -98,17 +98,22 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         //Set up the ui thread broadcast message receiver.
         setupUiThreadBroadCastMessageReceiver()
 
-        val presence = Presence(Presence.Type.available)
-        presence.status = "Available"
-
-        mConnection = XMPPTCPConnection(conf)
+        mConnection = XMPPBOSHConnection(conf)
         mConnection!!.addConnectionListener(this)
         try {
             Log.d(TAG, "Calling connect() ")
-            mConnection!!.connect()
-            mConnection!!.login(mUsername, mPassword)
-            mConnection!!.sendStanza(presence)
+            if (!mConnection!!.isConnected) {
+                mConnection!!.connect()
+                Thread.sleep(SmackConfiguration.getDefaultReplyTimeout().toLong());
+                mConnection!!.login()
+            } else if (!mConnection!!.isAuthenticated) {
+                mConnection!!.login()
+            }
             Log.d(TAG, " login() Called ")
+
+            val presence = Presence(Presence.Type.available)
+            presence.status = "Available"
+            mConnection!!.sendStanza(presence)
         } catch (e: InterruptedException) {
             e.printStackTrace()
         }

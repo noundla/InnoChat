@@ -44,8 +44,13 @@ dependencies {
     //Smack configuration with smack for XMPP over TCP
     implementation "org.igniterealtime.smack:smack-android:$smack_version"
     implementation "org.igniterealtime.smack:smack-experimental:$smack_version"
-    implementation "org.igniterealtime.smack:smack-tcp:$smack_version"
-    //implementation "org.igniterealtime.smack:smack-im:$smack_version"
+//    implementation "org.igniterealtime.smack:smack-tcp:$smack_version"
+    implementation "org.igniterealtime.smack:smack-im:$smack_version"
+    implementation "org.igniterealtime.smack:smack-extensions:$smack_version"
+
+    implementation ("org.igniterealtime.smack:smack-bosh:$smack_version") {
+        exclude group: 'org.apache.httpcomponents', module:'httpclient'
+    }
 
     implementation 'com.android.support:customtabs:27.1.1'
 

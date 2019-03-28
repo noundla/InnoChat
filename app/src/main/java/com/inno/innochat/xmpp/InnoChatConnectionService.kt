@@ -71,7 +71,6 @@ class InnoChatConnectionService : Service() {
         stop()
         unregisterReceivers()
         super.onDestroy()
-
     }
 
     private fun registerReceivers() {
@@ -92,7 +91,6 @@ class InnoChatConnectionService : Service() {
             unregisterReceiver(mNewUserSubscribeBroadcastReceiver)
         }
     }
-
 
     fun start() {
         Log.d(TAG, " Service Start() function called.")
