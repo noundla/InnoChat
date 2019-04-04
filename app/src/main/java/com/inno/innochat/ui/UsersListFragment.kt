@@ -35,8 +35,6 @@ import ir.rainday.easylist.RecyclerViewAdapter
 import ir.rainday.easylist.setEmptyView
 import kotlinx.android.synthetic.main.fragment_users_list.*
 import java.util.*
-import org.jxmpp.jid.impl.JidCreate
-import org.jxmpp.jid.EntityBareJid
 /**
  * This fragment is used to display users list(friends list) screen.
  * User can perform search operation to find a friend easily here.

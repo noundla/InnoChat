@@ -121,6 +121,12 @@ class LoginFragment : Fragment() {
 
         val userName = userNameET.text.toString()
         val password = passwordET.text.toString()
+        val enteredPort = portNumberET.text.toString()
+        try {
+            Constants.PORT = enteredPort.toInt()
+        } catch (e: Exception) {
+            Constants.PORT = Constants.DEF_PORT
+        }
 
         var cancel = false
         var focusView: View? = null

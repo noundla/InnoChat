@@ -17,4 +17,5 @@
     <string name="add">Add</string>
     <string name="add_person">Add Person</string>
     <string name="your_message_here">Type a message</string>
+    <string name="port">Port</string>
 </resources>

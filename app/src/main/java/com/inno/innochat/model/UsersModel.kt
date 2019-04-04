@@ -8,7 +8,6 @@ import com.inno.innochat.Constants
 import io.realm.Realm
 import io.realm.RealmResults
 import org.jivesoftware.smack.roster.RosterEntry
-import org.jxmpp.jid.Jid
 /**
  * @author Sandeep Noundla
  * */
@@ -89,11 +88,11 @@ class UsersModel {
             override fun execute(realm: Realm) {
                 for ((i, item) in entries.withIndex()) {
                     var name = if (TextUtils.isEmpty(item.name)) {
-                        item.jid.toString().split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
+                        item.user.toString().split("@".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0]
                     } else {
                         item.name
                     }
-                    val user = User(item.jid.toString(), name,
+                    val user = User(item.user.toString(), name,
                             imageUrls[i%imageUrls.size],
                             isCommTo = currentUser!!.id)
                     realm.insertOrUpdate(user)
