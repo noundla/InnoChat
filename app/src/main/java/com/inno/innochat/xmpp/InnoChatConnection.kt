@@ -243,6 +243,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
             mRoster!!.removeRosterListener(mRosterListener)
         }
         if (mConnection != null) {
+            mConnection!!.removeConnectionListener(this)
             mConnection!!.disconnect()
         }
 
