@@ -26,6 +26,9 @@ import org.jivesoftware.smack.roster.RosterEntry
 import org.jivesoftware.smack.roster.RosterListener
 import org.jivesoftware.smackx.muc.MultiUserChat
 import org.jivesoftware.smackx.muc.MultiUserChatManager
+import org.jxmpp.jid.Jid
+import org.jxmpp.jid.impl.JidCreate
+import org.jxmpp.jid.parts.Resourcepart
 import java.io.IOException
 import java.net.InetAddress
 
@@ -49,7 +52,6 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private var mMultiUserChat: MultiUserChat? = null
     private var mStanzaListener: StanzaListener? = null
     private var mRoster: Roster? = null
-    private var mChatManager: ChatManager? = null
     private var uiThreadMessageReceiver: BroadcastReceiver? = null//Receives messages from the ui thread.
 
 
@@ -82,7 +84,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         Log.d(TAG, "Connecting to server ${Constants.HOST}")
 
         val conf = XMPPTCPConnectionConfiguration.builder()
-                .setServiceName(Constants.DOMAIN)
+                .setXmppDomain(Constants.DOMAIN)
                 .setHost(Constants.HOST)
                 .setPort(Constants.PORT)
                 .setUsernameAndPassword(mUsername, mPassword!!)
@@ -115,10 +117,11 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         }
 
         val multiUserChatManager = MultiUserChatManager.getInstanceFor(mConnection)
-        mMultiUserChat = multiUserChatManager.getMultiUserChat("internal" + "@conference." + Constants.DOMAIN)
+        val roomJid = JidCreate.entityBareFrom("internal" + "@conference."+Constants.HOST)
+        mMultiUserChat = multiUserChatManager.getMultiUserChat(roomJid)
 
         try {
-            mMultiUserChat!!.join(getLocalJid())
+            mMultiUserChat!!.join(Resourcepart.from(mUsername))
         } catch (e: Exception) {
             Log.e(TAG, "Cannot join room: " + mMultiUserChat!!.getRoom(), e)
         }
@@ -134,7 +137,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         }
 
         mStanzaListener = object : StanzaListener {
-            override fun processPacket(packet: Stanza?) {
+            override fun processStanza(packet: Stanza?) {
                 if (packet is Message) {
                     Log.d(TAG, "Received message from ${packet.from} with body : ${packet.body}")
                     val from = packet.from.toString()
@@ -157,12 +160,11 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     }
 
     private val mRosterListener = object : RosterListener {
-        override fun entriesDeleted(addresses: MutableCollection<String>?) {
+        override fun entriesDeleted(addresses: MutableCollection<Jid>?) {
             Log.d(TAG, "entriesDeleted for ${addresses}")
         }
 
         override fun presenceChanged(presence: Presence?) {
-
             Log.d(TAG, "Presence changed for ${presence?.from}, isAvailable: ${presence?.isAvailable}")
             if (presence != null) {
                 val from = getJid(presence!!.from.toString())
@@ -170,13 +172,13 @@ class InnoChatConnection(context: Context) : ConnectionListener {
             }
         }
 
-        override fun entriesUpdated(addresses: MutableCollection<String>?) {
+        override fun entriesUpdated(addresses: MutableCollection<Jid>?) {
             Log.d(TAG, "entriesUpdated for ${addresses}")
             fetchAndListenRosterChanges()
 
         }
 
-        override fun entriesAdded(addresses: MutableCollection<String>?) {
+        override fun entriesAdded(addresses: MutableCollection<Jid>?) {
             Log.d(TAG, "entriesAdded for ${addresses}")
             fetchAndListenRosterChanges()
         }
@@ -199,13 +201,13 @@ class InnoChatConnection(context: Context) : ConnectionListener {
      * Also listen for roster updates.
      * */
     private fun fetchAndListenRosterChanges() {
-        mChatManager = ChatManager.getInstanceFor(mConnection)
-        mChatManager!!.addChatListener(object : ChatManagerListener {
-            override fun chatCreated(chat: Chat?, createdLocally: Boolean) {
-                Log.d(TAG, "chatCreated: createdLocally:$createdLocally, chat: $chat")
-            }
-
-        })
+//        mChatManager = ChatManager.getInstanceFor(mConnection)
+//        mChatManager!!.addChatListener(object : ChatManagerListener {
+//            override fun chatCreated(chat: Chat?, createdLocally: Boolean) {
+//                Log.d(TAG, "chatCreated: createdLocally:$createdLocally, chat: $chat")
+//            }
+//
+//        })
         mRoster = Roster.getInstanceFor(mConnection)
         // Accepts all subscription automatically. As it is just a sample application.
         mRoster!!.subscriptionMode = Roster.SubscriptionMode.accept_all
@@ -244,10 +246,10 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         try {
 
 
-            var messageObj: Message = Message(toJid)
+            var messageObj: Message = Message(JidCreate.bareFrom(toJid))
             messageObj.body = body
             messageObj.subject = "TEXT"
-            mConnection!!.sendPacket(messageObj);
+            mConnection!!.sendStanza(messageObj);
         } catch (e: SmackException.NotConnectedException) {
             Log.e(TAG, "sendMessage", e)
         }
@@ -304,18 +306,6 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         InnoChatConnectionService.sConnectionState = ConnectionState.DISCONNECTED
         Log.d(TAG, "ConnectionClosedOnError, error " + e.toString())
 
-    }
-
-    override fun reconnectionSuccessful() {
-        Log.d(TAG, "reconnectionSuccessful()")
-    }
-
-    override fun reconnectionFailed(e: java.lang.Exception?) {
-        Log.e(TAG, "reconnectionFailed()",e)
-    }
-
-    override fun reconnectingIn(seconds: Int) {
-        Log.d(TAG, "reconnectingIn() seconds: $seconds")
     }
 
     /**
