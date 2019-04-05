@@ -2,27 +2,19 @@ package com.inno.innochat.xmpp
 
 import android.content.*
 import android.preference.PreferenceManager
-import android.support.v4.content.LocalBroadcastManager
 import android.text.TextUtils
 import android.util.Log
-import com.inno.innochat.AppHelpers
 import com.inno.innochat.Constants
 import com.inno.innochat.model.MessagingModel
 import com.inno.innochat.model.UsersModel
 import org.jivesoftware.smack.*
-import org.jxmpp.stringprep.XmppStringprepException
-import org.jivesoftware.smack.tcp.XMPPTCPConnection
-import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration
-import org.jivesoftware.smack.chat.Chat
-import org.jivesoftware.smack.chat.ChatManager
-import org.jivesoftware.smack.chat.ChatManagerListener
-import org.jivesoftware.smack.chat.ChatMessageListener
+import org.jivesoftware.smack.bosh.BOSHConfiguration
+import org.jivesoftware.smack.bosh.XMPPBOSHConnection
 import org.jivesoftware.smack.filter.StanzaFilter
 import org.jivesoftware.smack.packet.Message
 import org.jivesoftware.smack.packet.Presence
 import org.jivesoftware.smack.packet.Stanza
 import org.jivesoftware.smack.roster.Roster
-import org.jivesoftware.smack.roster.RosterEntry
 import org.jivesoftware.smack.roster.RosterListener
 import org.jivesoftware.smackx.muc.MultiUserChat
 import org.jivesoftware.smackx.muc.MultiUserChatManager
@@ -30,7 +22,6 @@ import org.jxmpp.jid.Jid
 import org.jxmpp.jid.impl.JidCreate
 import org.jxmpp.jid.parts.Resourcepart
 import java.io.IOException
-import java.net.InetAddress
 
 /**
  * This class is used to initiate the XMPP connection and handle the users/presence change.
@@ -48,7 +39,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     private val mUsername: String
     private val mPassword: String?
     //private val mServiceName: String
-    private var mConnection: XMPPTCPConnection? = null
+    private var mConnection: XMPPBOSHConnection? = null
     private var mMultiUserChat: MultiUserChat? = null
     private var mStanzaListener: StanzaListener? = null
     private var mRoster: Roster? = null
@@ -83,7 +74,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
     fun connect() {
         Log.d(TAG, "Connecting to server ${Constants.HOST}")
 
-        val conf = XMPPTCPConnectionConfiguration.builder()
+        val conf = BOSHConfiguration.builder()
                 .setXmppDomain(Constants.DOMAIN)
                 .setHost(Constants.HOST)
                 .setPort(Constants.PORT)
@@ -95,6 +86,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
 //                .setKeystoreType(null)
                 .setSendPresence(true)
                 .setResource("Android")
+                .setFile("/http-bind/")
                 .build()
 
         Log.d(TAG, "Username : $mUsername")
@@ -103,7 +95,7 @@ class InnoChatConnection(context: Context) : ConnectionListener {
         //Set up the ui thread broadcast message receiver.
         setupUiThreadBroadCastMessageReceiver()
 
-        mConnection = XMPPTCPConnection(conf)
+        mConnection = XMPPBOSHConnection(conf)
         mConnection!!.addConnectionListener(this)
         try {
             Log.d(TAG, "Calling connect() ")
